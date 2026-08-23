@@ -507,7 +507,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `💰 Số dư ví của bạn: **${balance.toLocaleString()} Xu**`, ephemeral: true });
     }
 
-    // ĐẶT CƯỢC (TÀI, XỈU, CHẴN, LẺ)
+    // ĐẶT CƯỢC (TÀI, XỈU, CHẮN, LẺ)
     if (currentSession.status !== 'WAITING') {
       return interaction.reply({ content: '❌ Phiên cược đã đóng!', ephemeral: true });
     }
@@ -516,6 +516,17 @@ client.on('interactionCreate', async (interaction) => {
     if (['bet_TAI', 'bet_XIU', 'bet_CHAN', 'bet_LE'].includes(customId)) {
       const betType = customId.replace('bet_', '');
       
+      // ==========================================
+      // FIX LỖI 1: CHẶN ĐẶT CƯỢC NHIỀU LẦN / NHIỀU CỬA
+      // ==========================================
+      const existingBet = currentSession.bets.find(b => b.userId === userId);
+      if (existingBet) {
+        return interaction.reply({ 
+          content: `❌ Bạn đã đặt cược **${existingBet.amount.toLocaleString()} Xu** vào cửa **${existingBet.type}** rồi! Mỗi phiên chỉ được cược 1 lần duy nhất.`, 
+          ephemeral: true 
+        });
+      }
+
       let betAmountSetting = getSelectedBetAmount(userId);
       let amount = betAmountSetting === 'ALLIN' ? balance : betAmountSetting;
 
@@ -553,7 +564,7 @@ client.on('interactionCreate', async (interaction) => {
 
       await currentSession.messageObj.edit({ embeds: [buildSessionEmbed()], components: buildButtons() }).catch(() => {});
     }
-  }
+
 
   // 2. XỬ LÝ NHẬP TIỀN TÙY Ý (MODAL)
   if (interaction.isModalSubmit()) {
