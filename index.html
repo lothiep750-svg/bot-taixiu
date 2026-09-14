@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Kiếm Tu: Huyền Vực</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071019;color:white;font-family:system-ui,sans-serif;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none}
+.panel{position:absolute;background:#07101ddd;border:1px solid #ffffff22;border-radius:14px;padding:10px;box-shadow:0 8px 25px #0008}
+#stats{left:10px;top:10px;width:205px}
+#quest{right:10px;top:10px;width:205px;font-size:12px}
+.bar{height:9px;background:#202b35;border-radius:8px;overflow:hidden;margin-top:5px}
+.fill{height:100%;transition:.2s}
+.hp{background:#e84d63}.xp{background:#4aa8ff}
+#toast{left:50%;top:18%;transform:translateX(-50%);opacity:0;transition:.2s}
+#controls{position:fixed;inset:0;pointer-events:none}
+#stick{position:absolute;left:20px;bottom:25px;width:130px;height:130px;border:2px solid #ffffff25;background:#ffffff10;border-radius:50%;pointer-events:auto}
+#knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px;border-radius:50%;background:#ffffff25;border:2px solid #ffffff30}
+.action{position:absolute;border:0;border-radius:50%;pointer-events:auto;color:white;font-weight:900;box-shadow:0 8px 20px #0008}
+#atk{right:25px;bottom:35px;width:90px;height:90px;background:#c83e52;border:3px solid #ff9aa8}
+#skill{right:120px;bottom:108px;width:62px;height:62px;background:#3269c9;border:2px solid #8ab5ff;font-size:10px}
+#dash{right:30px;bottom:140px;width:55px;height:55px;background:#4b8b72;border:2px solid #a7e4ca;font-size:10px}
+#menu,#shop{position:fixed;inset:0;background:#02060bd9;display:none;align-items:center;justify-content:center;z-index:5}
+.box{width:min(92vw,420px);max-height:85vh;overflow:auto;background:#0d1825;border:1px solid #ffffff22;border-radius:20px;padding:20px;box-shadow:0 20px 60px #000}
+button{font:inherit}
+.menuBtn{width:100%;margin:6px 0;padding:12px;border:0;border-radius:10px;background:#24364b;color:#fff;font-weight:800}
+.close{background:#713744}
+.item{padding:10px;margin:7px 0;background:#182638;border-radius:10px}
+#menuBtn{position:fixed;right:12px;top:105px;z-index:3;padding:9px 12px;border:0;border-radius:10px;background:#101c2cdd;color:#fff;font-weight:bold}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#17314c,#050910 70%);z-index:10}
+.card{width:min(90vw,430px);padding:28px;border-radius:24px;text-align:center;background:#0c1622ee;border:1px solid #ffffff1c}
+#play{border:0;border-radius:14px;padding:14px 25px;background:#d99b3e;font-weight:900}
+.hidden{display:none!important}
+</style>
+</head>
+
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+<div id="stats" class="panel">
+<b>⚔️ Thiệp · Kiếm Tu</b>
+<span> Lv.<b id="lv">1</b></span>
+<div class="bar"><div id="hp" class="fill hp"></div></div>
+<small>HP <span id="hptext"></span></small>
+<div class="bar"><div id="xp" class="fill xp"></div></div>
+<small>EXP <span id="xptext"></span> · 💰 <span id="gold">0</span></small>
+</div>
+
+<div id="quest" class="panel">
+<b>🏯 Huyền Vực</b><br>
+Hạ quái để tăng cấp.<br>
+<span id="questtext">Hạ 0/10 quái</span>
+</div>
+
+<div id="toast" class="panel"></div>
+</div>
+
+<button id="menuBtn">☰ MENU</button>
+
+<div id="controls">
+<div id="stick"><div id="knob"></div></div>
+<button id="skill" class="action">KIẾM<br>KHÍ</button>
+<button id="dash" class="action">LƯỚT</button>
+<button id="atk" class="action">⚔<br>ĐÁNH</button>
+</div>
+
+<div id="menu">
+<div class="box">
+<h2>🎒 Menu</h2>
+<div id="inventory"></div>
+<button class="menuBtn" id="shopBtn">🛒 Cửa hàng</button>
+<button class="menuBtn" id="saveBtn">💾 Lưu ngay</button>
+<button class="menuBtn" id="resetBtn">♻️ Xóa save</button>
+<button class="menuBtn close" id="closeMenu">Đóng</button>
+</div>
+</div>
+
+<div id="shop">
+<div class="box">
+<h2>🛒 Cửa hàng</h2>
+<div class="item">🧪 Bình máu — 15 vàng<br>
+<button class="menuBtn" onclick="buyPotion()">Mua</button></div>
+<div class="item">⚔️ Cường hóa kiếm — 50 vàng<br>
+<button class="menuBtn" onclick="upgradeSword()">Nâng cấp</button></div>
+<div class="item">🛡️ Bùa hộ thân — 80 vàng<br>
+<button class="menuBtn" onclick="buyCharm()">Mua</button></div>
+<button class="menuBtn close" onclick="document.getElementById('shop').style.display='none'">Đóng</button>
+</div>
+</div>
+
+<div id="start">
+<div class="card">
+<div style="font-size:55px">⚔️</div>
+<h1>KIẾM TU: HUYỀN VỰC</h1>
+<p>Khám phá thế giới, săn quái, lên cấp, mua trang bị và đánh Boss.</p>
+<button id="play">BẮT ĐẦU</button>
+</div>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+let W,H;
+function resize(){
+ W=innerWidth;H=innerHeight;
+ canvas.width=W*devicePixelRatio;
+ canvas.height=H*devicePixelRatio;
+ ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+resize();addEventListener("resize",resize);
+
+const world={w:2600,h:1800};
+const player={
+ x:1300,y:900,r:20,
+ hp:120,maxHp:120,
+ level:1,xp:0,next:60,gold:30,
+ sword:1,potions:2,charm:0,
+ atkCd:0,skillCd:0,dashCd:0,inv:0,face:1
+};
+
+let enemies=[];
+let particles=[];
+let texts=[];
+let trees=[];
+let rocks=[];
+let waters=[];
+let kills=0;
+let started=false;
+let last=0;
+let cam={x:0,y:0};
+
+function rand(a,b){return Math.random()*(b-a)+a}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+
+for(let i=0;i<35;i++)
+ trees.push({x:rand(70,2530),y:rand(70,1730),s:rand(.7,1.3)});
+
+for(let i=0;i<55;i++)
+ rocks.push({x:rand(60,2540),y:rand(60,1740),s:rand(.5,1.2)});
+
+for(let i=0;i<6;i++)
+ waters.push({x:rand(200,2200),y:rand(150,1500),w:rand(150,270),h:rand(80,170)});
+
+function spawn(type,x,y){
+ const d={
+ wolf:{name:"Linh Lang",r:19,hp:45,spd:72,dmg:8,xp:18},
+ oni:{name:"Sơn Quỷ",r:25,hp:90,spd:48,dmg:13,xp:32},
+ scorp:{name:"Độc Hạt",r:17,hp:60,spd:62,dmg:10,xp:25},
+ boss:{name:"Hắc Lang",r:36,hp:600,spd:40,dmg:20,xp:200,boss:true}
+ }[type];
+ enemies.push({...d,type,x,y,hit:0,atk:rand(.2,1),dead:false});
+}
+
+for(let i=0;i<18;i++){
+ spawn(
+  Math.random()<.5?"wolf":Math.random()<.75?"scorp":"oni",
+  rand(150,2450),rand(150,1650)
+ );
+}
+spawn("boss",2150,520);
+
+function pos(x,y){return{x:x-cam.x,y:y-cam.y}}
+
+function drawMap(){
+ ctx.fillStyle="#173329";
+ ctx.fillRect(0,0,W,H);
+
+ let sx=Math.floor(cam.x/64)*64-64;
+ let sy=Math.floor(cam.y/64)*64-64;
+
+ for(let y=sy;y<cam.y+H+64;y+=64)
+ for(let x=sx;x<cam.x+W+64;x+=64){
+  ctx.fillStyle=((x/64+y/64)%5===0)?"#1c382c":"#193329";
+  ctx.fillRect(x-cam.x,y-cam.y,64,64);
+ }
+
+ ctx.fillStyle="#5c4936";
+ ctx.fillRect(-cam.x,850-cam.y,2600,90);
+ ctx.fillStyle="#725b40";
+ ctx.fillRect(-cam.x,875-cam.y,2600,35);
+
+ for(const z of waters){
+  let q=pos(z.x,z.y);
+  ctx.fillStyle="#164765";
+  ctx.beginPath();
+  ctx.roundRect(q.x,q.y,z.w,z.h,25);
+  ctx.fill();
+ }
+
+ for(const r of rocks){
+  let q=pos(r.x,r.y);
+  ctx.fillStyle="#3c4a53";
+  ctx.beginPath();
+  ctx.ellipse(q.x,q.y,18*r.s,12*r.s,0,0,Math.PI*2);
+  ctx.fill();
+ }
+
+ for(const t of trees){
+  let q=pos(t.x,t.y),s=t.s;
+  ctx.fillStyle="#2a201b";
+  ctx.fillRect(q.x-6*s,q.y+5*s,12*s,32*s);
+  ctx.fillStyle="#164635";
+  ctx.beginPath();
+  ctx.arc(q.x,q.y,29*s,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle="#286247";
+  ctx.beginPath();
+  ctx.arc(q.x-15*s,q.y-5*s,20*s,0,Math.PI*2);
+  ctx.arc(q.x+15*s,q.y-5*s,20*s,0,Math.PI*2);
+  ctx.fill();
+ }
+
+ let s=pos(1300,900);
+ ctx.fillStyle="#4d3528";
+ ctx.fillRect(s.x-60,s.y-40,120,80);
+ ctx.fillStyle="#98653d";
+ ctx.beginPath();
+ ctx.moveTo(s.x-80,s.y-40);
+ ctx.lineTo(s.x,s.y-90);
+ ctx.lineTo(s.x+80,s.y-40);
+ ctx.fill();
+ ctx.fillStyle="#e8b75b";
+ ctx.fillRect(s.x-8,s.y-15,16,30);
+}
+
+function drawPlayer(){
+ let q=pos(player.x,player.y);
+ ctx.save();
+ ctx.translate(q.x,q.y);
+ ctx.scale(player.face,1);
+
+ ctx.fillStyle="#0006";
+ ctx.beginPath();
+ ctx.ellipse(0,25,25,8,0,0,Math.PI*2);
+ ctx.fill();
+
+ ctx.fillStyle="#31589b";
+ ctx.beginPath();
+ ctx.moveTo(-18,-2);ctx.lineTo(18,-2);
+ ctx.lineTo(21,25);ctx.lineTo(-21,25);
+ ctx.closePath();ctx.fill();
+
+ ctx.fillStyle="#e4b18a";
+ ctx.beginPath();
+ ctx.arc(0,-14,13,0,Math.PI*2);ctx.fill();
+
+ ctx.fillStyle="#161b29";
+ ctx.beginPath();
+ ctx.arc(0,-18,14,Math.PI,Math.PI*2);
+ ctx.fill();
+
+ ctx.strokeStyle="#dcecff";
+ ctx.lineWidth=4;
+ ctx.beginPath();
+ ctx.moveTo(12,3);ctx.lineTo(37,-20);ctx.stroke();
+
+ ctx.strokeStyle="#d79c52";
+ ctx.lineWidth=3;
+ ctx.beginPath();
+ ctx.moveTo(8,4);ctx.lineTo(18,13);ctx.stroke();
+
+ ctx.restore();
+}
+
+function drawEnemy(e){
+ if(e.dead)return;
+ let q=pos(e.x,e.y);
+
+ ctx.save();
+ ctx.translate(q.x,q.y);
+
+ ctx.fillStyle="#0006";
+ ctx.beginPath();
+ ctx.ellipse(0,e.r+8,e.r,7,0,0,Math.PI*2);
+ ctx.fill();
+
+ if(e.type==="wolf"||e.type==="boss"){
+  let r=e.r;
+  ctx.fillStyle=e.boss?"#41204e":"#65707a";
+  ctx.beginPath();
+  ctx.ellipse(0,4,r*1.1,r*.72,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(r*.7,-8,r*.6,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle=e.boss?"#ff4dcb":"#ff5665";
+  ctx.fillRect(r*.9,-10,5,5);
+
+  ctx.fillStyle="#303943";
+  ctx.fillRect(-r,12,8,13);
+  ctx.fillRect(r*.45,12,8,13);
+ }
+
+ else if(e.type==="oni"){
+  let r=e.r;
+  ctx.fillStyle="#923e45";
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="#e8c5a7";
+  ctx.fillRect(-10,-5,7,5);
+  ctx.fillRect(4,-5,7,5);
+
+  ctx.fillStyle="#cdd5dd";
+  ctx.beginPath();
+  ctx.moveTo(-10,-19);ctx.lineTo(-4,-33);ctx.lineTo(0,-18);ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(10,-19);ctx.lineTo(4,-33);ctx.lineTo(0,-18);ctx.fill();
+ }
+
+ else{
+  let r=e.r;
+  ctx.fillStyle="#b87d35";
+  ctx.beginPath();
+  ctx.ellipse(0,0,r*1.2,r*.7,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle="#e7aa4d";
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(-r,0);ctx.lineTo(-r-15,-10);
+  ctx.moveTo(-r,5);ctx.lineTo(-r-15,14);
+  ctx.stroke();
+
+  ctx.fillStyle="#ff5252";
+  ctx.fillRect(5,-5,4,4);
+ }
+
+ ctx.restore();
+
+ if(e.hp<e.maxHp){
+  let w=e.boss?100:50;
+  ctx.fillStyle="#0009";
+  ctx.fillRect(q.x-w/2,q.y-e.r-17,w,6);
+  ctx.fillStyle=e.boss?"#bd54ff":"#e84d63";
+  ctx.fillRect(q.x-w/2,q.y-e.r-17,w*Math.max(0,e.hp/e.maxHp),6);
+ }
+
+ if(e.boss){
+  ctx.fillStyle="white";
+  ctx.font="bold 12px system-ui";
+  ctx.textAlign="center";
+  ctx.fillText("👑 HẮC LANG",q.x,q.y-e.r-25);
+ }
+}
+
+function burst(x,y,color,n=12){
+ for(let i=0;i<n;i++)
+ particles.push({
+  x,y,vx:rand(-150,150),vy:rand(-150,150),
+  life:rand(.25,.6),max:.6,color,size:rand(2,6)
+ });
+}
+
+function text(x,y,t,color="#fff"){
+ texts.push({x,y,t,color,life:.8});
+}
+
+function toast(t){
+ const el=document.getElementById("toast");
+ el.textContent=t;
+ el.style.opacity=1;
+ clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>el.style.opacity=0,1800);
+}
+
+function attack(){
+ if(player.atkCd>0)return;
+ player.atkCd=.3;
+
+ let hit=false;
+
+ for(const e of enemies){
+  if(e.dead)continue;
+
+  if(distance(player,e)<75){
+   let dmg=18+player.level*3+player.sword*5;
+   e.hp-=dmg;
+   e.hit=.12;
+
+   text(e.x,e.y-e.r,"-"+dmg,"#ffd36b");
+   burst(e.x,e.y,"#ffe7a3",7);
+   hit=true;
+
+   if(e.hp<=0)kill(e);
+  }
+ }
+
+ burst(player.x+player.face*30,player.y,"#bfe1ff",6);
+}
+
+function skill(){
+ if(player.skillCd>0)return;
+ player.skillCd=4;
+
+ text(player.x,player.y-45,"⚡ KIẾM KHÍ!","#8bc8ff");
+ burst(player.x,player.y,"#8bc8ff",35);
+
+ for(const e of enemies){
+  if(e.dead)continue;
+
+  if(distance(player,e)<150){
+   let dmg=40+player.level*8+player.sword*4;
+   e.hp-=dmg;
+   text(e.x,e.y-e.r,"-"+dmg,"#8bc8ff");
+
+   if(e.hp<=0)kill(e);
+  }
+ }
+}
+
+function dash(){
+ if(player.dashCd>0)return;
+ player.dashCd=1.7;
+ player.inv=.35;
+ player.x+=player.face*150;
+ burst(player.x-player.face*70,player.y,"#a9e8ff",18);
+}
+
+function kill(e){
+ if(e.dead)return;
+ e.dead=true;
+ kills++;
+
+ player.xp+=e.xp;
+ player.gold+=e.boss?150:Math.round(rand(4,10));
+
+ text(e.x,e.y,"+"+e.xp+" EXP","#70c5ff");
+ burst(e.x,e.y,e.boss?"#c25cff":"#ffc66d",e.boss?45:18);
+
+ if(e.boss){
+  toast("👑 HẠ BOSS! Huyền Vực đã bị chinh phục!");
+ }else{
+  setTimeout(()=>{
+   spawn(e.type,rand(150,2450),rand(150,1650));
+  },900);
+ }
+
+ while(player.xp>=player.next){
+  player.xp-=player.next;
+  player.level++;
+  player.next=Math.round(player.next*1.35);
+  player.maxHp+=25;
+  player.hp=player.maxHp;
+  toast("✨ Đột phá! Lên cấp "+player.level);
+ }
+
+ save();
+}
+
+const stick=document.getElementById("stick");
+const knob=document.getElementById("knob");
+let stickX=0,stickY=0;
+
+function moveStick(e){
+ let r=stick.getBoundingClientRect();
+ let x=e.clientX-(r.left+r.width/2);
+ let y=e.clientY-(r.top+r.height/2);
+ let m=Math.hypot(x,y)||1;
+ let max=45;
+
+ if(m>max){x=x/m*max;y=y/m*max}
+
+ stickX=x/max;
+ stickY=y/max;
+ knob.style.transform=`translate(${x}px,${y}px)`;
+}
+
+stick.addEventListener("pointerdown",e=>{
+ stick.setPointerCapture(e.pointerId);
+ moveStick(e);
+});
+
+stick.addEventListener("pointermove",e=>moveStick(e));
+
+stick.addEventListener("pointerup",()=>{
+ stickX=stickY=0;
+ knob.style.transform="translate(0,0)";
+});
+
+document.getElementById("atk").onpointerdown=attack;
+document.getElementById("skill").onpointerdown=skill;
+document.getElementById("dash").onpointerdown=dash;
+
+document.getElementById("menuBtn").onclick=()=>{
+ document.getElementById("menu").style.display="flex";
+ renderInventory();
+};
+
+document.getElementById("closeMenu").onclick=()=>{
+ document.getElementById("menu").style.display="none";
+};
+
+document.getElementById("shopBtn").onclick=()=>{
+ document.getElementById("shop").style.display="flex";
+};
+
+document.getElementById("saveBtn").onclick=()=>{
+ save();
+ toast("💾 Đã lưu dữ liệu!");
+};
+
+document.getElementById("resetBtn").onclick=()=>{
+ if(confirm("Xóa toàn bộ dữ liệu?")){
+  localStorage.removeItem("kiemtu_save");
+  location.reload();
+ }
+};
+
+function buyPotion(){
+ if(player.gold<15){
+  toast("Không đủ vàng!");
+  return;
+ }
+ player.gold-=15;
+ player.potions++;
+ toast("🧪 Đã mua bình máu");
+ save();
+ renderInventory();
+}
+
+function upgradeSword(){
+ let cost=50*player.sword;
+
+ if(player.gold<cost){
+  toast("Không đủ vàng!");
+  return;
+ }
+
+ player.gold-=cost;
+ player.sword++;
+ toast("⚔️ Kiếm lên cấp "+player.sword);
+ save();
+ renderInventory();
+}
+
+function buyCharm(){
+ if(player.gold<80){
+  toast("Không đủ vàng!");
+  return;
+ }
+
+ player.gold-=80;
+ player.charm++;
+ player.maxHp+=15;
+ player.hp=player.maxHp;
+
+ toast("🛡️ Nhận Bùa Hộ Thân!");
+ save();
+ renderInventory();
+}
+
+function renderInventory(){
+ document.getElementById("inventory").innerHTML=
+ `
+ <div class="item">⚔️ Kiếm cấp: <b>${player.sword}</b></div>
+ <div class="item">🧪 Bình máu: <b>${player.potions}</b></div>
+ <div class="item">🛡️ Bùa hộ thân: <b>${player.charm}</b></div>
+ <div class="item">💰 Vàng: <b>${player.gold}</b></div>
+ `;
+}
+
+function usePotion(){
+ if(player.potions<=0||player.hp>=player.maxHp)return;
+
+ player.potions--;
+ player.hp=Math.min(player.maxHp,player.hp+55);
+ toast("🧪 +55 HP");
+ save();
+}
+
+function save(){
+ const data={
+  x:player.x,y:player.y,
+  hp:player.hp,maxHp:player.maxHp,
+  level:player.level,xp:player.xp,next:player.next,
+  gold:player.gold,sword:player.sword,
+  potions:player.potions,charm:player.charm,
+  kills
+ };
+
+ localStorage.setItem("kiemtu_save",JSON.stringify(data));
+}
+
+function load(){
+ const raw=localStorage.getItem("kiemtu_save");
+ if(!raw)return;
+
+ try{
+  const d=JSON.parse(raw);
+  Object.assign(player,d);
+  if(typeof d.kills==="number")kills=d.kills;
+ }catch(e){}
+}
+
+load();
+
+setInterval(()=>{
+ if(started)save();
+},5000);
+
+addEventListener("keydown",e=>{
+ if(e.key===" ")attack();
+ if(e.key.toLowerCase()==="q")skill();
+ if(e.key.toLowerCase()==="e")dash();
+ if(e.key.toLowerCase()==="h")usePotion();
+});
+
+let keys={};
+
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+function update(dt){
+ player.atkCd=Math.max(0,player.atkCd-dt);
+ player.skillCd=Math.max(0,player.skillCd-dt);
+ player.dashCd=Math.max(0,player.dashCd-dt);
+ player.inv=Math.max(0,player.inv-dt);
+
+ let dx=stickX;
+ let dy=stickY;
+
+ if(keys.w||keys.arrowup)dy-=1;
+ if(keys.s||keys.arrowdown)dy+=1;
+ if(keys.a||keys.arrowleft)dx-=1;
+ if(keys.d||keys.arrowright)dx+=1;
+
+ let m=Math.hypot(dx,dy);
+
+ if(m){
+  dx/=m;dy/=m;
+  player.x+=dx*190*dt;
+  player.y+=dy*190*dt;
+
+  if(Math.abs(dx)>.15)
+   player.face=dx>0?1:-1;
+ }
+
+ player.x=Math.max(40,Math.min(world.w-40,player.x));
+ player.y=Math.max(40,Math.min(world.h-40,player.y));
+
+ for(const e of enemies){
+  if(e.dead)continue;
+
+  e.atk-=dt;
+
+  let dx=player.x-e.x;
+  let dy=player.y-e.y;
+  let d=Math.hypot(dx,dy)||1;
+
+  if(d<550){
+   if(d>e.r+38){
+    e.x+=dx/d*e.spd*dt;
+    e.y+=dy/d*e.spd*dt;
+   }else if(e.atk<=0&&player.inv<=0){
+    e.atk=1.2;
+    player.hp-=Math.max(1,e.dmg-player.charm*2);
+
+    text(player.x,player.y-35,"-"+e.dmg,"#ff6678");
+    burst(player.x,player.y,"#ff6678",8);
+
+    if(player.hp<=0){
+     player.hp=player.maxHp;
+     player.x=1300;
+     player.y=900;
+     toast("💀 Bạn đã ngã xuống!");
+    }
+   }
+  }
+ }
+
+ particles.forEach(o=>{
+  o.x+=o.vx*dt;
+  o.y+=o.vy*dt;
+  o.vy+=150*dt;
+  o.life-=dt;
+ });
+
+ particles=particles.filter(o=>o.life>0);
+
+ texts.forEach(o=>{
+  o.y-=28*dt;
+  o.life-=dt;
+ });
+
+ texts=texts.filter(o=>o.life>0);
+
+ cam.x+=(player.x-W/2-cam.x)*Math.min(1,dt*6);
+ cam.y+=(player.y-H/2-cam.y)*Math.min(1,dt*6);
+
+ cam.x=Math.max(0,Math.min(world.w-W,cam.x));
+ cam.y=Math.max(0,Math.min(world.h-H,cam.y));
+
+ document.getElementById("lv").textContent=player.level;
+ document.getElementById("hp").style.width=(player.hp/player.maxHp*100)+"%";
+ document.getElementById("hptext").textContent=Math.ceil(player.hp)+"/"+player.maxHp;
+ document.getElementById("xp").style.width=(player.xp/player.next*100)+"%";
+ document.getElementById("xptext").textContent=player.xp+"/"+player.next;
+ document.getElementById("gold").textContent=player.gold;
+ document.getElementById("questtext").textContent=
+ "Hạ "+kills+" quái · Kiếm Lv."+player.sword;
+}
+
+function draw(){
+ ctx.clearRect(0,0,W,H);
+
+ drawMap();
+
+ enemies
+  .filter(e=>!e.dead)
+  .sort((a,b)=>a.y-b.y)
+  .forEach(drawEnemy);
+
+ drawPlayer();
+
+ for(const o of particles){
+  let q=pos(o.x,o.y);
+  ctx.globalAlpha=Math.max(0,o.life/o.max);
+  ctx.fillStyle=o.color;
+  ctx.fillRect(q.x-o.size/2,q.y-o.size/2,o.size,o.size);
+ }
+
+ ctx.globalAlpha=1;
+
+ for(const o of texts){
+  let q=pos(o.x,o.y);
+  ctx.globalAlpha=Math.max(0,o.life/.8);
+  ctx.fillStyle=o.color;
+  ctx.font="bold 14px system-ui";
+  ctx.textAlign="center";
+  ctx.fillText(o.t,q.x,q.y);
+ }
+
+ ctx.globalAlpha=1;
+}
+
+function loop(t){
+ let dt=Math.min(.033,(t-last)/1000);
+ last=t;
+
+ update(dt);
+ draw();
+
+ requestAnimationFrame(loop);
+}
+
+document.getElementById("play").onclick=()=>{
+ started=true;
+ document.getElementById("start").classList.add("hidden");
+ last=performance.now();
+ requestAnimationFrame(loop);
+};
+
+</script>
+</body>
+</html>
